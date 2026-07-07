@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inquiries Tracker</title>
+    <!-- SheetJS Library para sa Direct Excel Export Function -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        /* --- CSS THEME CONFIGURATION --- */
+        :root {
+            --bg-main: #0f172a;       
+            --bg-card: #1e293b;       
+            --bg-input: #334155;      
+            --border-color: #475569;  
+            --text-main: #ffffff;     
+            --text-muted: #94a3b8;    
+            --accent-blue: #3b82f6;   
+            --accent-green: #10b981;  
+            --accent-teal: #14b8a6;
+            --accent-purple: #a855f7;
+            --accent-orange: #f97316;
+            --accent-red: #ef4444;    /* Para sa Delete Button */
+            --accent-excel: #16a34a; /* Excel Green Color */
+            --font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-family: var(--font-family);
+            padding: 2rem 1.5rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* --- HEADER AREA --- */
+        header {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1.5rem;
+        }
+
+        @media (min-width: 768px) {
+            header {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
+        }
+
+        .title-area h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+        }
+
+        .title-area p {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
+        /* --- CONTROLS PANEL --- */
+        .controls-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .date-picker-panel {
+            background-color: var(--bg-card);
+            padding: 0.6rem 1.2rem;
+            border-radius: 12px;
+            border: 1px solid var(--accent-blue);
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .date-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .date-group label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .date-group input[type="date"] {
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: #58a6ff;
+            font-weight: 700;
+            font-size: 0.9rem;
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .btn-excel {
+            background-color: var(--accent-excel);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.25rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background 0.2s, transform 0.1s;
+            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+        }
+
+        .btn-excel:hover { background-color: #15803d; transform: translateY(-1px); }
+        .btn-excel:active { transform: translateY(0); }
+
+        /* --- FORMS LAYOUT --- */
+        .forms-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (min-width: 1024px) {
+            .forms-container {
+                grid-template-columns: 1fr 2.5fr;
+            }
+        }
+
+        .form-panel {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .form-panel h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .form-panel .sub-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 1.25rem;
+            font-style: italic;
+        }
+
+        .campaign-panel h3 { color: var(--accent-orange); }
+        .log-panel h3 { color: var(--accent-blue); }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        @media (min-width: 640px) {
+            .log-panel .form-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .log-panel .full-width-input {
+                grid-column: span 2;
+            }
+        }
+
+        .input-box {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .input-box label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        .form-panel input, .form-panel select {
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 0.6rem 0.75rem;
+            border-radius: 6px;
+            outline: none;
+            font-size: 0.9rem;
+        }
+        
+        .form-panel input:focus, .form-panel select:focus {
+            border-color: var(--accent-blue);
+        }
+
+        /* --- IMAGE PREVIEW --- */
+        .image-preview-container {
+            width: 100%;
+            height: 120px;
+            border: 2px dashed var(--border-color);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(15, 23, 42, 0.4);
+            overflow: hidden;
+            position: relative;
+            margin-top: 0.25rem;
+        }
+
+        .image-preview-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .image-preview-placeholder {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+            padding: 0.5rem;
+        }
+
+        .btn-add, .btn-save {
+            color: white;
+            border: none;
+            padding: 0.75rem 1.25rem;
+            font-weight: 700;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            margin-top: 0.5rem;
+        }
+        .btn-add { background-color: var(--accent-blue); width: 100%; grid-column: span 1; }
+        @media (min-width: 640px) { .btn-add { grid-column: span 2; } }
+        
+        .btn-save { 
+            background-color: var(--accent-orange); 
+            width: 100%; 
+            box-shadow: 0 4px 6px rgba(249, 115, 22, 0.2);
+        }
+        .btn-add:hover { background-color: #2563eb; }
+        .btn-save:hover { background-color: #ea580c; }
+
+        /* --- KPI GRID --- */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (min-width: 768px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (min-width: 1200px) { .kpi-grid { grid-template-columns: repeat(6, 1fr); } }
+
+        .kpi-card {
+            background-color: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 4px; }
+        .kpi-card.blue::before { background-color: var(--accent-blue); }
+        .kpi-card.green::before { background-color: var(--accent-green); }
+        .kpi-card.teal::before { background-color: var(--accent-teal); }
+        .kpi-card.purple::before { background-color: var(--accent-purple); }
+        .kpi-card.orange::before { background-color: var(--accent-orange); }
+
+        .kpi-label { color: var(--text-muted); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+        .kpi-value { font-size: 1.5rem; font-weight: 700; margin-top: 0.5rem; word-break: break-all; }
+
+        /* --- TABLE & INTERACTIVE SELECTOR --- */
+        .table-container {
+            background-color: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .table-header-title {
+            padding: 1.25rem 1.5rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .responsive-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.85rem;
+        }
+
+        .responsive-table th {
+            background-color: rgba(51, 65, 85, 0.5);
+            color: var(--text-muted);
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        .responsive-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .responsive-table tbody tr.hidden-row { display: none; }
+
+        .source-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+        .source-badge.ads { background-color: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
+        .source-badge.organic { background-color: rgba(16, 119, 81, 0.15); color: var(--accent-green); }
+        
+        /* Interactive Row Inputs */
+        .table-select {
+            background-color: #0f172a;
+            color: #34d399;
+            border: 1px solid #10b981;
+            padding: 0.3rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            outline: none;
+        }
+        .table-select.pending-style {
+            color: #fb923c;
+            border-color: var(--accent-orange);
+        }
+        
+        .staff-name-text {
+            color: var(--accent-purple);
+            font-weight: 700;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+
+        /* TEXT INPUT FIELDS SA LOOB NG TABLE CELLS */
+        .table-text-input {
+            background-color: #0f172a;
+            color: #f1f5f9;
+            border: 1px solid transparent;
+            padding: 0.4rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            width: 100%;
+            min-width: 140px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .table-text-input:hover { border-color: var(--border-color); }
+        .table-text-input:focus {
+            border-color: var(--accent-blue);
+            background-color: var(--bg-input);
+        }
+
+        .table-amount-input {
+            background-color: #0f172a;
+            color: white;
+            border: 1px solid var(--border-color);
+            padding: 0.3rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            width: 85px;
+            outline: none;
+        }
+        .table-amount-input:focus { border-color: var(--accent-teal); }
+
+        /* Style para sa Delete Button Column */
+        .btn-delete-row {
+            background-color: transparent;
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.75rem;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .btn-delete-row:hover {
+            background-color: var(--accent-red);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- HEADER SECTION -->
+        <header>
+            <div class="title-area">
+                <h1>INQUIRIES TRACKER</h1>
+                <p>CAMPAIGN & SALES CHAT PERFORMANCE</p>
+            </div>
+            
+            <div class="controls-panel">
+                <div class="date-picker-panel">
+                    <div class="date-group">
+                        <label for="startDate">📅 Start:</label>
+                        <input type="date" id="startDate" value="2026-07-01">
+                    </div>
+                    <div class="date-group">
+                        <label for="endDate">📅 End:</label>
+                        <input type="date" id="endDate" value="2026-07-31">
+                    </div>
+                </div>
+                <button class="btn-excel" onclick="exportToExcel()">📊 Export Tracker to Excel</button>
+            </div>
+        </header>
+
+        <!-- INPUT LAYOUT BLOCK -->
+        <div class="forms-container">
+            
+            <!-- CAMPAIGN INFO -->
+            <section class="form-panel campaign-panel">
+                <h3>CAMPAIGN INFO</h3>
+                <div class="sub-label">MANUAL INPUT</div>
+                <div class="form-grid">
+                    <div class="input-box">
+                        <label>CAMPAIGN NAME:</label>
+                        <input type="text" id="campaignName" placeholder="e.g. Clearance Shirt Sale">
+                    </div>
+                    
+                    <div class="input-box">
+                        <label>CAMPAIGN IMAGE / VISUAL:</label>
+                        <input type="file" id="campaignImageFile" accept="image/*" onchange="previewCampaignImage(event)">
+                        <div class="image-preview-container" id="imagePreviewBox">
+                            <div class="image-preview-placeholder" id="previewPlaceholder">Image Uploaded here will not be included in raw Excel grid.</div>
+                        </div>
+                    </div>
+
+                    <div class="input-box">
+                        <label>TOTAL AD BUDGET SPENT:</label>
+                        <input type="number" id="adBudgetSpent" placeholder="0.00" value="1503">
+                    </div>
+                    
+                    <button class="btn-save" onclick="updateCampaignData()">Apply & Update</button>
+                </div>
+            </section>
+
+            <!-- CHAT ENTRY & ORDER LOGGER -->
+            <section class="form-panel log-panel">
+                <h3>➕INQUIRIES ENTRY LOGGER</h3>
+                <div class="sub-label">I-encode ang detalye ng kliyente, deal info, at kung sinong sales staff ang humawak:</div>
+                <div class="form-grid">
+                    <div class="input-box">
+                        <label>Date</label>
+                        <input type="date" id="insDate" value="2026-07-01">
+                    </div>
+                    <div class="input-box">
+                        <label>Client Name</label>
+                        <input type="text" id="insName" placeholder="Juan Dela Cruz">
+                    </div>
+                    <div class="input-box">
+                        <label>Source Type</label>
+                        <select id="insSource">
+                            <option value="ADS">ADS</option>
+                            <option value="ORGANIC">ORGANIC</option>
+                        </select>
+                    </div>
+                    <div class="input-box">
+                        <label>Clothing Type</label>
+                        <input type="text" id="insClothing" placeholder="e.g. T-Shirt / Hoodie">
+                    </div>
+                    
+                    <div class="input-box">
+                        <label>Deal Status</label>
+                        <select id="insStatus">
+                            <option value="DEAL">DEAL (Naka-Order / For Production)</option>
+                            <option value="PENDING">PENDING / ONGOING CHAT</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-box">
+                        <label>Deal Amount / Total Sales (₱)</label>
+                        <input type="number" id="insAmount" placeholder="0.00" value="0">
+                    </div>
+
+                    <div class="input-box">
+                        <label>👤 Assigned Sales Staff</label>
+                        <input type="text" id="insStaff" placeholder="e.g. Jess / Jhon" value="JESS">
+                    </div>
+                    <div></div> 
+
+                    <div class="input-box full-width-input">
+                        <label>Client Message</label>
+                        <input type="text" id="insMsg" placeholder="e.g. Pa-order po ng 10pcs T-Shirt">
+                    </div>
+                    <div class="input-box full-width-input">
+                        <label>Sales Response</label>
+                        <input type="text" id="insResp" placeholder="e.g. Noted po! Sent invoice sheet">
+                    </div>
+                    <div class="input-box full-width-input">
+                        <label>Follow-up Message (If Needed)</label>
+                        <input type="text" id="insFollow" placeholder="Isulat dito kung may follow up chat">
+                    </div>
+                    <button class="btn-add" onclick="addNewLog()">Add Entry</button>
+                </div>
+            </section>
+        </div>
+
+        <!-- DYNAMIC SUMMARY CARDS -->
+        <section class="kpi-grid">
+            <div class="kpi-card blue">
+                <div class="kpi-label">Total Chat</div>
+                <div class="kpi-value" id="kpiTotal">0</div>
+            </div>
+            <div class="kpi-card green">
+                <div class="kpi-label">Ads Chat</div>
+                <div class="kpi-value" id="kpiAds">0</div>
+            </div>
+            <div class="kpi-card teal">
+                <div class="kpi-label">Organic Chat</div>
+                <div class="kpi-value" id="kpiOrganic">0</div>
+            </div>
+            <div class="kpi-card orange">
+                <div class="kpi-label">Total Ad Spend (I9)</div>
+                <div class="kpi-value" id="kpiAdSpend">₱0.00</div>
+            </div>
+            <div class="kpi-card purple">
+                <div class="kpi-label">Total Deals (Orders)</div>
+                <div class="kpi-value" id="kpiDealsCount">0</div>
+            </div>
+            <div class="kpi-card green">
+                <div class="kpi-label">Total Revenue (Sales)</div>
+                <div class="kpi-value" id="kpiRevenue" style="color: #34d399;">₱0.00</div>
+            </div>
+        </section>
+
+        <!-- MAIN RECORDS LOG DATA TABLE -->
+        <main class="table-container">
+            <div class="table-header-title">INQUIRIES TRACK SHEET</div>
+            <div style="overflow-x: auto;">
+                <table class="responsive-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">Date</th>
+                            <th>Client Name</th>
+                            <th>Source</th>
+                            <th>Clothing Type</th>
+                            <th>Assigned Staff</th>
+                            <th>Status</th>
+                            <th>Amount</th>
+                            <th>Client Message (Editable)</th>
+                            <th>Sales Response (Editable)</th>
+                            <th>Follow-up Message (Editable)</th>
+                            <th style="width: 80px; text-align: center;">Action</th> <!-- BINAGO: Idinagdag ang Header -->
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Default Starting Mock Data -->
+                        <tr data-date="2026-07-01" data-source="ADS" data-status="DEAL" data-amount="3500">
+                            <td>2026-07-01</td>
+                            <td>DAN MC CLARENCE SANTOS</td>
+                            <td><span class="source-badge ads">ADS</span></td>
+                            <td>TSHIRT (10 PCS)</td>
+                            <td><span class="staff-name-text">👤 JESS</span></td>
+                            <td>
+                                <select class="table-select" onchange="updateRowStatus(this)">
+                                    <option value="DEAL" selected>DEAL</option>
+                                    <option value="PENDING">PENDING</option>
+                                </select>
+                            </td>
+                            <td>
+                                ₱<input type="number" class="table-amount-input" value="3500" oninput="updateRowAmount(this)">
+                            </td>
+                            <td><input type="text" class="table-text-input" value="Gusto ko po magpagawa ng batch shirts."></td>
+                            <td><input type="text" class="table-text-input" value="Noted sir. Sent sizing and layout approval."></td>
+                            <td><input type="text" class="table-text-input" value="N/A (Paid)"></td>
+                            <td style="text-align: center;"><button class="btn-delete-row" onclick="deleteRow(this)">❌</button></td> <!-- BINAGO -->
+                        </tr>
+                        <tr data-date="2026-07-02" data-source="ORGANIC" data-status="PENDING" data-amount="0">
+                            <td>2026-07-02</td>
+                            <td>DEXTER FERMALAN</td>
+                            <td><span class="source-badge organic">ORGANIC</span></td>
+                            <td>HOODIE</td>
+                            <td><span class="staff-name-text">👤 JHON</span></td>
+                            <td>
+                                <select class="table-select pending-style" onchange="updateRowStatus(this)">
+                                    <option value="DEAL">DEAL</option>
+                                    <option value="PENDING" selected>PENDING</option>
+                                </select>
+                            </td>
+                            <td>
+                                ₱<input type="number" class="table-amount-input" value="0" oninput="updateRowAmount(this)">
+                            </td>
+                            <td><input type="text" class="table-text-input" value="Available ba ang hoodie custom embroidery?"></td>
+                            <td><input type="text" class="table-text-input" value="Yes po, magsesend po ako ng templates."></td>
+                            <td><input type="text" class="table-text-input" value="Sent catalog follow up."></td>
+                            <td style="text-align: center;"><button class="btn-delete-row" onclick="deleteRow(this)">❌</button></td> <!-- BINAGO -->
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- --- JAVASCRIPT SYSTEM ENGINE --- -->
+    <script>
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+        const tableBody = document.getElementById('tableBody');
+        
+        const kpiTotal = document.getElementById('kpiTotal');
+        const kpiAds = document.getElementById('kpiAds');
+        const kpiOrganic = document.getElementById('kpiOrganic');
+        const kpiAdSpend = document.getElementById('kpiAdSpend');
+        const kpiDealsCount = document.getElementById('kpiDealsCount');
+        const kpiRevenue = document.getElementById('kpiRevenue');
+
+        let globalAdSpend = 1503;
+
+        function previewCampaignImage(event) {
+            const imageBox = document.getElementById('imagePreviewBox');
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imageBox.innerHTML = `<img src="${e.target.result}" alt="Campaign Preview">`;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // RE-CALCULATION MASTER ENGINE
+        function filterDataAndRecalculate() {
+            const startValue = startDateInput.value;
+            const endValue = endDateInput.value;
+            const rows = document.querySelectorAll('#tableBody tr');
+            
+            let totalCount = 0; 
+            let adsCount = 0;
+            let organicCount = 0;
+            let dealCount = 0;
+            let totalRevenue = 0;
+
+            rows.forEach(row => {
+                const rowDate = row.getAttribute('data-date');
+                const rowSource = row.getAttribute('data-source');
+                const rowStatus = row.getAttribute('data-status');
+                const rowAmount = parseFloat(row.getAttribute('data-amount')) || 0;
+
+                const isAfterStart = !startValue || rowDate >= startValue;
+                const isBeforeEnd = !endValue || rowDate <= endValue;
+
+                if (isAfterStart && isBeforeEnd) {
+                    row.classList.remove('hidden-row');
+                    totalCount++;
+                    if (rowSource === 'ADS') adsCount++;
+                    if (rowSource === 'ORGANIC') organicCount++;
+                    if (rowStatus === 'DEAL') {
+                        dealCount++;
+                        totalRevenue += rowAmount;
+                    }
+                } else {
+                    row.classList.add('hidden-row');
+                }
+            });
+
+            kpiTotal.textContent = totalCount;
+            kpiAds.textContent = adsCount;
+            kpiOrganic.textContent = organicCount;
+            kpiDealsCount.textContent = dealCount;
+            
+            kpiAdSpend.textContent = "₱" + globalAdSpend.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            kpiRevenue.textContent = "₱" + totalRevenue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+
+        function updateRowStatus(selectElement) {
+            const row = selectElement.closest('tr');
+            const newStatus = selectElement.value;
+            
+            row.setAttribute('data-status', newStatus);
+            
+            if (newStatus === 'PENDING') {
+                selectElement.classList.add('pending-style');
+            } else {
+                selectElement.classList.remove('pending-style');
+            }
+            
+            filterDataAndRecalculate();
+        }
+
+        function updateRowAmount(inputElement) {
+            const row = inputElement.closest('tr');
+            const newAmount = parseFloat(inputElement.value) || 0;
+            
+            row.setAttribute('data-amount', newAmount);
+            filterDataAndRecalculate();
+        }
+
+        function updateCampaignData() {
+            const parsedSpend = parseFloat(document.getElementById('adBudgetSpent').value);
+            globalAdSpend = isNaN(parsedSpend) ? 0 : parsedSpend;
+            filterDataAndRecalculate();
+            alert("Campaign parameters updated!");
+        }
+
+        function addNewLog() {
+            const insDate = document.getElementById('insDate').value;
+            const insName = document.getElementById('insName').value.trim();
+            const insSource = document.getElementById('insSource').value;
+            const insClothing = document.getElementById('insClothing').value.trim() || 'N/A';
+            const insStatus = document.getElementById('insStatus').value;
+            const insAmount = parseFloat(document.getElementById('insAmount').value) || 0;
+            const insStaff = document.getElementById('insStaff').value.trim() || 'UNASSIGNED';
+            const insMsg = document.getElementById('insMsg').value.trim() || 'N/A';
+            const insResp = document.getElementById('insResp').value.trim() || 'N/A';
+            const insFollow = document.getElementById('insFollow').value.trim() || 'N/A';
+
+            if(!insName) {
+                alert("Paki-sulat ang Client Name bago mag-add!");
+                return;
+            }
+
+            const newRow = document.createElement('tr');
+            newRow.setAttribute('data-date', insDate);
+            newRow.setAttribute('data-source', insSource);
+            newRow.setAttribute('data-status', insStatus);
+            newRow.setAttribute('data-amount', insAmount);
+
+            const badgeClass = insSource === 'ADS' ? 'source-badge ads' : 'source-badge organic';
+            const pendingStyleClass = insStatus === 'PENDING' ? 'table-select pending-style' : 'table-select';
+
+            newRow.innerHTML = `
+                <td>${insDate}</td>
+                <td>${insName.toUpperCase()}</td>
+                <td><span class="${badgeClass}">${insSource}</span></td>
+                <td>${insClothing.toUpperCase()}</td>
+                <td><span class="staff-name-text">👤 ${insStaff.toUpperCase()}</span></td>
+                <td>
+                    <select class="${pendingStyleClass}" onchange="updateRowStatus(this)">
+                        <option value="DEAL" ${insStatus === 'DEAL' ? 'selected' : ''}>🎉 DEAL</option>
+                        <option value="PENDING" ${insStatus === 'PENDING' ? 'selected' : ''}>💬 PENDING</option>
+                    </select>
+                </td>
+                <td>
+                    ₱<input type="number" class="table-amount-input" value="${insAmount}" oninput="updateRowAmount(this)">
+                </td>
+                <td><input type="text" class="table-text-input" value="${insMsg}"></td>
+                <td><input type="text" class="table-text-input" value="${insResp}"></td>
+                <td><input type="text" class="table-text-input" value="${insFollow}"></td>
+                <td style="text-align: center;"><button class="btn-delete-row" onclick="deleteRow(this)">❌</button></td>
+            `;
+
+            tableBody.insertBefore(newRow, tableBody.firstChild);
+
+            // Linisin ang inputs matapos mag log
+            document.getElementById('insName').value = '';
+            document.getElementById('insClothing').value = '';
+            document.getElementById('insAmount').value = '0';
+            document.getElementById('insMsg').value = '';
+            document.getElementById('insResp').value = '';
+            document.getElementById('insFollow').value = '';
+
+            filterDataAndRecalculate();
+        }
+
+        // BINAGO: FUNCTION PARA SA PAGBURA NG HILERA / INQUIRY RECORD
+        function deleteRow(buttonElement) {
+            if (confirm("Sigurado ka bang gusto mo itong burahin?")) {
+                const row = buttonElement.closest('tr');
+                row.remove();
+                filterDataAndRecalculate(); // Auto-update ng KPI Cards
+            }
+        }
+
+        startDateInput.addEventListener('change', filterDataAndRecalculate);
+        endDateInput.addEventListener('change', filterDataAndRecalculate);
+        
+        filterDataAndRecalculate();
+
+        // --- NEW CHROME-POWERED DIRECT EXCEL EXPORT FUNCTION ---
+        function exportToExcel() {
+            const rows = document.querySelectorAll('#tableBody tr');
+            const dataArray = [];
+
+            // 1. Gumawa ng Excel headers (Hindi kasama ang Action column para malinis)
+            const headers = [
+                "Date", 
+                "Client Name", 
+                "Source Type", 
+                "Clothing Type", 
+                "Assigned Staff", 
+                "Deal Status", 
+                "Amount Paid (PHP)", 
+                "Client Message", 
+                "Sales Response", 
+                "Follow-up Note"
+            ];
+            dataArray.push(headers);
+
+            // 2. Hilahin ang pinaka-updated na text/values mula sa table inputs
+            rows.forEach(row => {
+                if (row.classList.contains('hidden-row')) return;
+
+                const date = row.cells[0].innerText.trim();
+                const clientName = row.cells[1].innerText.trim();
+                const source = row.getAttribute('data-source');
+                const clothing = row.cells[3].innerText.trim();
+                const staff = row.cells[4].innerText.replace('👤', '').trim();
+                
+                const statusSelect = row.cells[5].querySelector('select');
+                const status = statusSelect ? statusSelect.value : row.getAttribute('data-status');
+                
+                const amountInput = row.cells[6].querySelector('input');
+                const amount = amountInput ? parseFloat(amountInput.value) || 0 : 0;
+                
+                const clientMsgInput = row.cells[7].querySelector('input');
+                const clientMsg = clientMsgInput ? clientMsgInput.value : '';
+                
+                const salesRespInput = row.cells[8].querySelector('input');
+                const salesResp = salesRespInput ? salesRespInput.value : '';
+                
+                const followUpInput = row.cells[9].querySelector('input');
+                const followUp = followUpInput ? followUpInput.value : '';
+
+                dataArray.push([
+                    date, clientName, source, clothing, staff, status, amount, clientMsg, salesResp, followUp
+                ]);
+            });
+
+            if(dataArray.length <= 1) {
+                alert("Walang data na pwedeng i-export sa napiling Date Range!");
+                return;
+            }
+
+            // 3. I-proseso gamit ang SheetJS papuntang Workbook file
+            const worksheet = XLSX.utils.aoa_to_sheet(dataArray);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "CRM Sales Tracker");
+
+            // Auto-fit Column Widths para hindi maging "###" o masikip sa Excel
+            const maxCols = dataArray[0].length;
+            worksheet['!cols'] = [];
+            for (let i = 0; i < maxCols; i++) {
+                let maxLen = 12; 
+                dataArray.forEach(row => {
+                    if (row[i]) {
+                        const valStr = row[i].toString();
+                        if (valStr.length > maxLen) maxLen = valStr.length;
+                    }
+                });
+                worksheet['!cols'].push({ wch: maxLen + 3 });
+            }
+
+            // 4. I-download na ang .xlsx file direktang computer
+            const campaignNameText = document.getElementById('campaignName').value.trim().replace(/[^a-z0-9]/gi, '_') || 'Sales';
+            const fileName = `CRM_Tracker_Report_${campaignNameText}.xlsx`;
+            XLSX.writeFile(workbook, fileName);
+        }
+    </script>
+</body>
+</html>
