@@ -21,8 +21,8 @@
             --accent-teal: #14b8a6;
             --accent-purple: #a855f7;
             --accent-orange: #f97316;
-            --accent-red: #ef4444;    /* Para sa Delete Button */
-            --accent-excel: #16a34a; /* Excel Green Color */
+            --accent-red: #ef4444;    
+            --accent-excel: #16a34a; 
             --font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
         }
 
@@ -288,8 +288,8 @@
         .kpi-card.blue::before { background-color: var(--accent-blue); }
         .kpi-card.green::before { background-color: var(--accent-green); }
         .kpi-card.teal::before { background-color: var(--accent-teal); }
-        .kpi-card.purple::before { background-color: var(--accent-purple); }
         .kpi-card.orange::before { background-color: var(--accent-orange); }
+        .kpi-card.purple::before { background-color: var(--accent-purple); }
 
         .kpi-label { color: var(--text-muted); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
         .kpi-value { font-size: 1.5rem; font-weight: 700; margin-top: 0.5rem; word-break: break-all; }
@@ -399,7 +399,6 @@
         }
         .table-amount-input:focus { border-color: var(--accent-teal); }
 
-        /* Style para sa Delete Button Column */
         .btn-delete-row {
             background-color: transparent;
             color: var(--accent-red);
@@ -579,51 +578,11 @@
                             <th>Client Message (Editable)</th>
                             <th>Sales Response (Editable)</th>
                             <th>Follow-up Message (Editable)</th>
-                            <th style="width: 80px; text-align: center;">Action</th> <!-- BINAGO: Idinagdag ang Header -->
+                            <th style="width: 80px; text-align: center;">Action</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
-                        <!-- Default Starting Mock Data -->
-                        <tr data-date="2026-07-01" data-source="ADS" data-status="DEAL" data-amount="3500">
-                            <td>2026-07-01</td>
-                            <td>DAN MC CLARENCE SANTOS</td>
-                            <td><span class="source-badge ads">ADS</span></td>
-                            <td>TSHIRT (10 PCS)</td>
-                            <td><span class="staff-name-text">👤 JESS</span></td>
-                            <td>
-                                <select class="table-select" onchange="updateRowStatus(this)">
-                                    <option value="DEAL" selected>DEAL</option>
-                                    <option value="PENDING">PENDING</option>
-                                </select>
-                            </td>
-                            <td>
-                                ₱<input type="number" class="table-amount-input" value="3500" oninput="updateRowAmount(this)">
-                            </td>
-                            <td><input type="text" class="table-text-input" value="Gusto ko po magpagawa ng batch shirts."></td>
-                            <td><input type="text" class="table-text-input" value="Noted sir. Sent sizing and layout approval."></td>
-                            <td><input type="text" class="table-text-input" value="N/A (Paid)"></td>
-                            <td style="text-align: center;"><button class="btn-delete-row" onclick="deleteRow(this)">❌</button></td> <!-- BINAGO -->
-                        </tr>
-                        <tr data-date="2026-07-02" data-source="ORGANIC" data-status="PENDING" data-amount="0">
-                            <td>2026-07-02</td>
-                            <td>DEXTER FERMALAN</td>
-                            <td><span class="source-badge organic">ORGANIC</span></td>
-                            <td>HOODIE</td>
-                            <td><span class="staff-name-text">👤 JHON</span></td>
-                            <td>
-                                <select class="table-select pending-style" onchange="updateRowStatus(this)">
-                                    <option value="DEAL">DEAL</option>
-                                    <option value="PENDING" selected>PENDING</option>
-                                </select>
-                            </td>
-                            <td>
-                                ₱<input type="number" class="table-amount-input" value="0" oninput="updateRowAmount(this)">
-                            </td>
-                            <td><input type="text" class="table-text-input" value="Available ba ang hoodie custom embroidery?"></td>
-                            <td><input type="text" class="table-text-input" value="Yes po, magsesend po ako ng templates."></td>
-                            <td><input type="text" class="table-text-input" value="Sent catalog follow up."></td>
-                            <td style="text-align: center;"><button class="btn-delete-row" onclick="deleteRow(this)">❌</button></td> <!-- BINAGO -->
-                        </tr>
+                        <!-- BINAGO: Tinanggal na ang mock data rito para malinis at fresh ang simula -->
                     </tbody>
                 </table>
             </div>
@@ -791,12 +750,11 @@
             filterDataAndRecalculate();
         }
 
-        // BINAGO: FUNCTION PARA SA PAGBURA NG HILERA / INQUIRY RECORD
         function deleteRow(buttonElement) {
             if (confirm("Sigurado ka bang gusto mo itong burahin?")) {
                 const row = buttonElement.closest('tr');
                 row.remove();
-                filterDataAndRecalculate(); // Auto-update ng KPI Cards
+                filterDataAndRecalculate(); 
             }
         }
 
@@ -805,12 +763,11 @@
         
         filterDataAndRecalculate();
 
-        // --- NEW CHROME-POWERED DIRECT EXCEL EXPORT FUNCTION ---
+        // --- EXCEL EXPORT FUNCTION ---
         function exportToExcel() {
             const rows = document.querySelectorAll('#tableBody tr');
             const dataArray = [];
 
-            // 1. Gumawa ng Excel headers (Hindi kasama ang Action column para malinis)
             const headers = [
                 "Date", 
                 "Client Name", 
@@ -825,7 +782,6 @@
             ];
             dataArray.push(headers);
 
-            // 2. Hilahin ang pinaka-updated na text/values mula sa table inputs
             rows.forEach(row => {
                 if (row.classList.contains('hidden-row')) return;
 
@@ -860,12 +816,10 @@
                 return;
             }
 
-            // 3. I-proseso gamit ang SheetJS papuntang Workbook file
             const worksheet = XLSX.utils.aoa_to_sheet(dataArray);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "CRM Sales Tracker");
 
-            // Auto-fit Column Widths para hindi maging "###" o masikip sa Excel
             const maxCols = dataArray[0].length;
             worksheet['!cols'] = [];
             for (let i = 0; i < maxCols; i++) {
@@ -879,7 +833,6 @@
                 worksheet['!cols'].push({ wch: maxLen + 3 });
             }
 
-            // 4. I-download na ang .xlsx file direktang computer
             const campaignNameText = document.getElementById('campaignName').value.trim().replace(/[^a-z0-9]/gi, '_') || 'Sales';
             const fileName = `CRM_Tracker_Report_${campaignNameText}.xlsx`;
             XLSX.writeFile(workbook, fileName);
