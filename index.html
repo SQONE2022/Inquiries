@@ -6,6 +6,10 @@
     <title>Inquiries Tracker</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    
     <style>
         /* --- CSS THEME CONFIGURATION --- */
         :root {
@@ -589,13 +593,29 @@
                         </tr>
                     </thead>
                     <tbody id="tableBody">
-                        </tbody>
+                    </tbody>
                 </table>
             </div>
         </main>
     </div>
 
     <script>
+        // --- 🔴 FIREBASE CONFIGURATION AREA ---
+        // Palitan ang laman nito mula sa iyong Firebase Console (Project Settings -> Web App)
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            databaseURL: "YOUR_DATABASE_URL",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
         const startDateInput = document.getElementById('startDate');
         const endDateInput = document.getElementById('endDate');
         const tableBody = document.getElementById('tableBody');
@@ -607,58 +627,42 @@
         const kpiDealsCount = document.getElementById('kpiDealsCount');
         const kpiRevenue = document.getElementById('kpiRevenue');
 
-        let globalAdSpend = 1503;
+        let globalAdSpend = 0;
+        let campaignImageBase64 = "";
 
-        // LOAD DATA
+        // LISTEN TO REALTIME FIREBASE CHANGES
         document.addEventListener("DOMContentLoaded", () => {
-            if(localStorage.getItem("crm_campaignName")) {
-                document.getElementById('campaignName').value = localStorage.getItem("crm_campaignName");
-            }
-            if(localStorage.getItem("crm_adBudgetSpent")) {
-                globalAdSpend = parseFloat(localStorage.getItem("crm_adBudgetSpent")) || 1503;
-                document.getElementById('adBudgetSpent').value = globalAdSpend;
-            }
-
-            const savedRecords = JSON.parse(localStorage.getItem("crm_tracker_records")) || [];
-            savedRecords.forEach(record => {
-                renderTableRow(record, false); 
+            // Fetch and Sync Campaign Info
+            database.ref("campaign_info").on("value", (snapshot) => {
+                const data = snapshot.val();
+                if(data) {
+                    document.getElementById('campaignName').value = data.name || "";
+                    globalAdSpend = parseFloat(data.adSpend) || 0;
+                    document.getElementById('adBudgetSpent').value = globalAdSpend;
+                    
+                    if(data.image) {
+                        campaignImageBase64 = data.image;
+                        document.getElementById('imagePreviewBox').innerHTML = `<img src="${data.image}" alt="Campaign Preview">`;
+                    }
+                }
+                filterDataAndRecalculate();
             });
 
-            filterDataAndRecalculate();
+            // Fetch and Sync Tracker Records Table
+            database.ref("tracker_records").on("value", (snapshot) => {
+                tableBody.innerHTML = ""; // Clear for re-rendering
+                const data = snapshot.val();
+                if(data) {
+                    // Ayusin ang rendering mula sa Firebase Object
+                    Object.keys(data).reverse().forEach(key => {
+                        const record = data[key];
+                        record.id = key; // Save Firebase key for updates
+                        renderTableRow(record, false);
+                    });
+                }
+                filterDataAndRecalculate();
+            });
         });
-
-        // SAVE DATA
-        function saveAllToLocalStorage() {
-            const rows = document.querySelectorAll('#tableBody tr');
-            const recordsArray = [];
-
-            rows.forEach(row => {
-                const date = row.cells[0].innerText.trim();
-                const clientName = row.cells[1].innerText.trim();
-                const source = row.getAttribute('data-source');
-                const clothing = row.cells[3].innerText.trim();
-                const staff = row.cells[4].innerText.replace('👤', '').trim();
-                const status = row.getAttribute('data-status');
-                
-                const amountInput = row.cells[6].querySelector('input');
-                const amount = amountInput ? parseFloat(amountInput.value) || 0 : 0;
-                
-                const clientMsgInput = row.cells[7].querySelector('input');
-                const clientMsg = clientMsgInput ? clientMsgInput.value : '';
-                
-                const salesRespInput = row.cells[8].querySelector('input');
-                const salesResp = salesRespInput ? salesRespInput.value : '';
-                
-                const followUpInput = row.cells[9].querySelector('input');
-                const followUp = followUpInput ? followUpInput.value : '';
-
-                recordsArray.push({
-                    date, clientName, source, clothing, staff, status, amount, clientMsg, salesResp, followUp
-                });
-            });
-
-            localStorage.setItem("crm_tracker_records", JSON.stringify(recordsArray));
-        }
 
         function previewCampaignImage(event) {
             const imageBox = document.getElementById('imagePreviewBox');
@@ -666,7 +670,8 @@
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    imageBox.innerHTML = `<img src="${e.target.result}" alt="Campaign Preview">`;
+                    campaignImageBase64 = e.target.result;
+                    imageBox.innerHTML = `<img src="${campaignImageBase64}" alt="Campaign Preview">`;
                 }
                 reader.readAsDataURL(file);
             }
@@ -718,44 +723,42 @@
 
         function updateRowStatus(selectElement) {
             const row = selectElement.closest('tr');
+            const recordId = row.getAttribute('data-id');
             const newStatus = selectElement.value;
             
-            row.setAttribute('data-status', newStatus);
-            
-            if (newStatus === 'PENDING') {
-                selectElement.classList.add('pending-style');
-            } else {
-                selectElement.classList.remove('pending-style');
-            }
-            
-            saveAllToLocalStorage();
-            filterDataAndRecalculate();
+            database.ref("tracker_records/" + recordId).update({ status: newStatus });
         }
 
         function updateRowAmount(inputElement) {
             const row = inputElement.closest('tr');
+            const recordId = row.getAttribute('data-id');
             const newAmount = parseFloat(inputElement.value) || 0;
             
-            row.setAttribute('data-amount', newAmount);
-            saveAllToLocalStorage();
-            filterDataAndRecalculate();
+            database.ref("tracker_records/" + recordId).update({ amount: newAmount });
         }
 
-        function handleInlineTextChange() {
-            saveAllToLocalStorage();
+        function handleInlineTextChange(inputElement, fieldName) {
+            const row = inputElement.closest('tr');
+            const recordId = row.getAttribute('data-id');
+            const newVal = inputElement.value;
+            
+            let updateObj = {};
+            updateObj[fieldName] = newVal;
+            database.ref("tracker_records/" + recordId).update(updateObj);
         }
 
         function updateCampaignData() {
             const parsedSpend = parseFloat(document.getElementById('adBudgetSpent').value);
-            const campaignName = document.getElementById('campaignName').value.trim();
+            const name = document.getElementById('campaignName').value.trim();
+            const adSpend = isNaN(parsedSpend) ? 0 : parsedSpend;
             
-            globalAdSpend = isNaN(parsedSpend) ? 0 : parsedSpend;
-            
-            localStorage.setItem("crm_campaignName", campaignName);
-            localStorage.setItem("crm_adBudgetSpent", globalAdSpend);
-            
-            filterDataAndRecalculate();
-            alert("Campaign parameters saved successfully!");
+            database.ref("campaign_info").set({
+                name: name,
+                adSpend: adSpend,
+                image: campaignImageBase64
+            }).then(() => {
+                alert("Campaign parameters synced across all accounts!");
+            });
         }
 
         function addNewLog() {
@@ -788,7 +791,8 @@
                 followUp: insFollow
             };
 
-            renderTableRow(recordObj, true);
+            // Push dynamically to Firebase Realtime Database
+            database.ref("tracker_records").push(recordObj);
 
             document.getElementById('insName').value = '';
             document.getElementById('insClothing').value = '';
@@ -796,13 +800,11 @@
             document.getElementById('insMsg').value = '';
             document.getElementById('insResp').value = '';
             document.getElementById('insFollow').value = '';
-
-            saveAllToLocalStorage();
-            filterDataAndRecalculate();
         }
 
         function renderTableRow(obj, insertAtTop = false) {
             const newRow = document.createElement('tr');
+            newRow.setAttribute('data-id', obj.id);
             newRow.setAttribute('data-date', obj.date);
             newRow.setAttribute('data-source', obj.source);
             newRow.setAttribute('data-status', obj.status);
@@ -826,9 +828,9 @@
                 <td>
                     ₱<input type="number" class="table-amount-input" value="${obj.amount}" oninput="updateRowAmount(this)">
                 </td>
-                <td><input type="text" class="table-text-input" value="${obj.clientMsg}" oninput="handleInlineTextChange()"></td>
-                <td><input type="text" class="table-text-input" value="${obj.salesResp}" oninput="handleInlineTextChange()"></td>
-                <td><input type="text" class="table-text-input" value="${obj.followUp}" oninput="handleInlineTextChange()"></td>
+                <td><input type="text" class="table-text-input" value="${obj.clientMsg}" oninput="handleInlineTextChange(this, 'clientMsg')"></td>
+                <td><input type="text" class="table-text-input" value="${obj.salesResp}" oninput="handleInlineTextChange(this, 'salesResp')"></td>
+                <td><input type="text" class="table-text-input" value="${obj.followUp}" oninput="handleInlineTextChange(this, 'followUp')"></td>
                 <td style="text-align: center;"><button class="btn-delete-row" onclick="deleteRow(this)">❌</button></td>
             `;
 
@@ -842,17 +844,14 @@
         function deleteRow(buttonElement) {
             if (confirm("Sigurado ka bang gusto mo itong burahin?")) {
                 const row = buttonElement.closest('tr');
-                row.remove();
-                saveAllToLocalStorage();
-                filterDataAndRecalculate(); 
+                const recordId = row.getAttribute('data-id');
+                database.ref("tracker_records/" + recordId).remove();
             }
         }
 
         function clearAllTrackerData() {
-            if (confirm("⚠️ WARNING: Sigurado ka bang gusto mong burahin ang LAHAT ng naka-encode na data? Siguraduhing naka-Export muna ito sa Excel bago i-clear!")) {
-                localStorage.removeItem("crm_tracker_records");
-                tableBody.innerHTML = "";
-                filterDataAndRecalculate();
+            if (confirm("⚠️ WARNING: Sigurado ka bang gusto mong burahin ang LAHAT ng naka-encode na data sa cloud?")) {
+                database.ref("tracker_records").remove();
                 alert("Nalinis na ang buong track sheet system!");
             }
         }
@@ -865,18 +864,10 @@
             const rows = document.querySelectorAll('#tableBody tr');
             const dataArray = [];
 
-            // Excel Column Names
             const headers = [
-                "Date", 
-                "Client Name", 
-                "Source Type", 
-                "Clothing Type", 
-                "Assigned Staff", 
-                "Deal Status", 
-                "Amount Paid (PHP)", 
-                "Client Message", 
-                "Sales Response", 
-                "Follow-up Note"
+                "Date", "Client Name", "Source Type", "Clothing Type", 
+                "Assigned Staff", "Deal Status", "Amount Paid (PHP)", 
+                "Client Message", "Sales Response", "Follow-up Note"
             ];
             dataArray.push(headers);
 
@@ -889,7 +880,6 @@
                 const clothing = row.cells[3].innerText.trim();
                 const staff = row.cells[4].innerText.replace('👤', '').trim();
                 
-                // MGA PAG-AYOS SA CELL INPUT READING:
                 const statusSelect = row.cells[5].querySelector('select');
                 const status = statusSelect ? statusSelect.value : row.getAttribute('data-status');
                 
@@ -919,7 +909,6 @@
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "CRM Sales Tracker");
 
-            // Auto Column Size Configuration
             const maxCols = dataArray[0].length;
             worksheet['!cols'] = [];
             for (let i = 0; i < maxCols; i++) {
